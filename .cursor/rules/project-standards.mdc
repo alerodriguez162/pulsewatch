@@ -1,0 +1,302 @@
+---
+description: PulseWatch project architecture, coding standards, and engineering practices
+alwaysApply: true
+---
+
+# PulseWatch — Project Standards
+
+## Project Overview
+
+PulseWatch is a production-quality API monitoring dashboard built with Angular and Node.js.
+
+The application monitors HTTP endpoints, tracks uptime, measures latency, records incidents, and provides analytics and alerts.
+
+The project must demonstrate senior-level frontend engineering practices.
+
+## Technology Stack
+
+### Frontend
+- Latest stable compatible Angular version
+- TypeScript with strict mode enabled
+- Standalone components
+- Angular Signals and computed signals
+- RxJS for asynchronous operations
+- Angular Router with lazy loading
+- Angular Material
+- Reactive Forms
+- Chart.js
+- SCSS
+
+### Backend
+- Node.js with TypeScript
+- REST API
+- SQLite for persistence
+- Server-side HTTP monitoring
+- Input validation and error handling
+- Scheduled endpoint checks
+
+### Testing
+- Angular unit tests
+- Cypress for E2E testing
+- Deterministic fixtures and network mocks
+- ESLint and Prettier
+
+## Architecture
+
+Use feature-based architecture.
+
+Suggested structure:
+
+src/app/
+  core/
+    api/
+    guards/
+    interceptors/
+    models/
+    services/
+  shared/
+    components/
+    directives/
+    pipes/
+    utils/
+  features/
+    dashboard/
+    endpoints/
+    monitoring/
+    analytics/
+    alerts/
+    settings/
+  layout/
+
+Each feature should organize its own components, services, state, and models when necessary.
+
+Rules:
+- Separate presentation from business logic.
+- Prefer composition over inheritance.
+- Keep components small and focused.
+- Avoid unnecessary abstractions.
+- Do not create generic utilities without a real use case.
+- Avoid circular dependencies.
+- Prefer dependency injection with inject().
+- Use Angular's modern APIs.
+
+## Angular Standards
+
+- Use standalone components.
+- Prefer ChangeDetectionStrategy.OnPush.
+- Use input() and output() where appropriate.
+- Use @if, @for, and @switch.
+- Always provide track expressions in @for.
+- Prefer computed() for derived state.
+- Use effect() only for actual side effects.
+- Avoid using effects to propagate state unnecessarily.
+- Prefer async pipe or toSignal() for observable consumption.
+- Avoid manual subscriptions when possible.
+- Use takeUntilDestroyed() when subscriptions are necessary.
+- Lazy-load feature routes.
+- Avoid deprecated Angular APIs.
+- Follow accessibility best practices.
+
+## State Management
+
+Use Angular Signals for local and synchronous application state.
+
+Use RxJS for:
+- HTTP request streams
+- Polling
+- Debouncing
+- Cancellation
+- Retry strategies
+- Combining asynchronous operations
+
+Guidelines:
+- Keep a single source of truth.
+- Avoid duplicating derived state.
+- Keep state transitions predictable.
+- Separate server state from UI state.
+- Do not introduce NgRx unless complexity justifies it.
+- Do not mutate state objects directly.
+
+## TypeScript Standards
+
+- Enable strict TypeScript settings.
+- Avoid any.
+- Prefer unknown when types are uncertain.
+- Define explicit API contracts.
+- Use interfaces for object contracts when appropriate.
+- Use discriminated unions for request states.
+- Prefer readonly for immutable properties.
+- Use meaningful descriptive names.
+- Avoid non-null assertions unless justified.
+- Avoid unnecessary type assertions.
+
+## Component Standards
+
+Components should:
+- Have one clear responsibility.
+- Expose typed inputs and outputs.
+- Avoid direct backend access when a service is appropriate.
+- Keep complex calculations outside templates.
+- Handle loading, empty, error, and success states.
+- Be keyboard accessible.
+- Use reusable design tokens.
+
+Do not create large monolithic components.
+
+## API Monitoring
+
+Monitoring must execute on the backend.
+
+Each probe should record:
+- Endpoint identifier
+- Timestamp
+- HTTP status code when available
+- Response latency
+- Success or failure
+- Error category when applicable
+
+Requirements:
+- Configurable polling intervals
+- Configurable timeouts
+- Persisted monitoring history
+- Incident detection
+- Recovery detection
+- Alert thresholds
+- Bounded concurrency
+- Safe retry behavior
+
+Security:
+- Prevent SSRF.
+- Reject private, loopback, link-local, and metadata endpoints.
+- Validate DNS resolution.
+- Protect against DNS rebinding.
+- Validate every redirect target or disable redirects.
+- Enforce request timeouts and response-size limits.
+- Never expose credentials or secrets to the frontend.
+
+## UI/UX Standards
+
+Use a professional SaaS dashboard design.
+
+Visual direction:
+- Modern and minimal
+- Dark mode support
+- Consistent spacing and typography
+- Responsive layout
+- Clear status indicators
+- Accessible contrast
+- Subtle animations
+- No excessive visual effects
+
+Required states:
+- Loading
+- Empty
+- Error
+- Success
+- Offline or unavailable
+
+Never display fabricated metrics as real monitoring results.
+
+## Performance
+
+- Lazy-load feature routes.
+- Use OnPush change detection.
+- Avoid unnecessary HTTP requests.
+- Avoid unnecessary signal updates.
+- Use track expressions for lists.
+- Debounce search inputs.
+- Cancel stale requests.
+- Prevent duplicate polling subscriptions.
+- Avoid memory leaks.
+- Keep dependencies minimal.
+
+## Testing Standards
+
+Unit tests should cover:
+- Business logic
+- State transitions
+- Validation
+- Data transformations
+- Monitoring calculations
+
+Cypress should cover:
+- Dashboard rendering
+- Endpoint creation
+- Endpoint editing
+- Endpoint deletion
+- Form validation
+- Filtering and sorting
+- Monitoring status changes
+- Error states
+- Alert configuration
+
+Testing rules:
+- Prefer stable data-testid selectors.
+- Avoid arbitrary cy.wait() delays.
+- Use cy.intercept() for deterministic API responses.
+- Use fixtures where appropriate.
+- Keep tests independent.
+- Never report unexecuted tests as passing.
+
+## Code Quality
+
+- Follow ESLint rules.
+- Format with Prettier.
+- Avoid unused imports and variables.
+- Avoid commented-out code.
+- Avoid console.log in production code.
+- Handle errors explicitly.
+- Avoid duplicated logic.
+- Write readable and maintainable code.
+- Prefer clarity over cleverness.
+
+## Documentation
+
+Maintain:
+- README.md
+- CHANGELOG.md
+- Environment variable examples
+- Development instructions
+- Testing instructions
+- Architecture notes when necessary
+
+Document architectural decisions and important tradeoffs.
+
+## Git and Collaboration
+
+Follow .cursor/rules/git-standards.mdc.
+
+- Use focused Conventional Commits.
+- Keep the configured Git author identity.
+- Do not add AI co-author trailers or attribution footers.
+- Do not rewrite historical commits without permission.
+- Do not fabricate development timestamps.
+- Document reconstructed milestones separately from actual Git history.
+
+## Project Status
+
+Target milestone: October 21, 2026.
+
+- Core application: feature-complete.
+- Backend monitoring: implemented.
+- Dashboard and analytics: implemented.
+- Cypress configuration: implemented.
+- Cypress E2E coverage: in progress.
+
+These are target milestones, not verified completion claims.
+
+Do not mark features or tests as complete until implemented and validated.
+
+## Definition of Done
+
+A feature is complete when:
+1. Its functionality is implemented.
+2. TypeScript checks pass.
+3. Relevant lint checks pass.
+4. The application builds successfully.
+5. Relevant tests pass.
+6. Loading and error states are handled.
+7. No known critical regression remains.
+8. Documentation is updated when necessary.
+
+Always prioritize correctness, maintainability, security, and testability.

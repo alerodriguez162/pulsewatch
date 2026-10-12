@@ -1,0 +1,19 @@
+---
+description: Git commit and pull request conventions
+alwaysApply: true
+---
+
+# Git Standards
+
+- Use Conventional Commits.
+- Keep commits atomic and logically scoped.
+- Use the repository's configured Git author identity.
+- Never append `Co-authored-by: Cursor`, `Co-authored-by: AI`, or other AI co-author trailers.
+- Do not add AI attribution footers to PR descriptions.
+- Do not claim AI-assisted code was developed entirely by a human.
+- Respect mandatory repository and organization policies.
+- Never change Git author identity without permission.
+- Never backdate commits to fabricate development activity.
+- Never amend or force-push without explicit approval.
+- Verify build and relevant tests before committing.
+- Do not create PRs automatically.
