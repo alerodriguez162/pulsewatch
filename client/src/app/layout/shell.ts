@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
+import { MonitoringStore } from '../core/monitoring-store';
 import { ThemeService } from '../core/theme.service';
 
 @Component({
@@ -29,4 +31,9 @@ import { ThemeService } from '../core/theme.service';
 })
 export class Shell {
   readonly theme = inject(ThemeService);
+  private readonly store = inject(MonitoringStore);
+
+  constructor() {
+    this.store.refresh().pipe(takeUntilDestroyed()).subscribe();
+  }
 }
