@@ -2,11 +2,23 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import type { DatabaseSync } from 'node:sqlite';
 import { ZodError } from 'zod';
 
-import { createEndpoint, dashboard, deleteEndpoint, getEndpoint, listEndpoints, updateEndpoint } from './db.js';
+import {
+  createEndpoint,
+  dashboard,
+  deleteEndpoint,
+  getEndpoint,
+  listEndpoints,
+  listHistory,
+  listIncidents,
+  updateEndpoint,
+} from './db.js';
+import type { ProbeScheduler } from './scheduler.js';
 import { ProbeTargetError, resolvePublicTarget } from './security/ssrf.js';
 import { endpointDraftSchema } from './validation.js';
 
-export function createApp(db: DatabaseSync) {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function createApp(db: DatabaseSync, scheduler: ProbeScheduler) {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '16kb' }));
@@ -18,7 +30,7 @@ export function createApp(db: DatabaseSync) {
   app.get('/api/dashboard', (_req, res) => {
     res.json({
       endpoints: dashboard(db),
-      recentIncidents: [],
+      recentIncidents: listIncidents(db).slice(0, 8),
       generatedAt: new Date().toISOString(),
     });
   });
@@ -53,7 +65,8 @@ export function createApp(db: DatabaseSync) {
         return;
       }
       const draft = await parseDraft({ ...existing, ...req.body });
-      res.json(updateEndpoint(db, existing.id, draft));
+      const updated = updateEndpoint(db, existing.id, draft);
+      res.json(updated);
     } catch (error) {
       next(error);
     }
@@ -65,6 +78,33 @@ export function createApp(db: DatabaseSync) {
       return;
     }
     res.status(204).send();
+  });
+
+  app.get('/api/endpoints/:id/history', (req, res) => {
+    if (!getEndpoint(db, req.params.id)) {
+      res.status(404).json({ error: 'Endpoint not found.' });
+      return;
+    }
+    const since = new Date(Date.now() - DAY_MS).toISOString();
+    res.json(listHistory(db, req.params.id, since));
+  });
+
+  app.post('/api/endpoints/:id/check', async (req, res, next) => {
+    try {
+      const observation = await scheduler.checkNow(req.params.id);
+      if (!observation) {
+        res.status(404).json({ error: 'Endpoint not found or paused.' });
+        return;
+      }
+      res.json(observation);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.get('/api/incidents', (req, res) => {
+    const endpointId = typeof req.query['endpointId'] === 'string' ? req.query['endpointId'] : undefined;
+    res.json(listIncidents(db, endpointId));
   });
 
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {

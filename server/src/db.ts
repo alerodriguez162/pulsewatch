@@ -1,9 +1,23 @@
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { randomUUID } from 'node:crypto';
 
-import type { EndpointDraft, EndpointRecord, EndpointSummary, HttpMethod } from './types.js';
+import { decideIncidents, incidentMessage } from './incidents.js';
+import { averageLatency, uptimePercent } from './uptime.js';
+import type {
+  EndpointDraft,
+  EndpointRecord,
+  EndpointSummary,
+  ErrorCategory,
+  HttpMethod,
+  IncidentKind,
+  IncidentRecord,
+  ProbeObservation,
+  ProbeResultRecord,
+} from './types.js';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 interface EndpointRow {
   id: string;
@@ -49,6 +63,30 @@ export function migrate(db: DatabaseSync): void {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS probe_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      endpoint_id TEXT NOT NULL,
+      checked_at TEXT NOT NULL,
+      status_code INTEGER,
+      latency_ms INTEGER NOT NULL,
+      success INTEGER NOT NULL,
+      error_category TEXT,
+      FOREIGN KEY (endpoint_id) REFERENCES endpoints(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS incidents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      endpoint_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      resolved_at TEXT,
+      message TEXT NOT NULL,
+      FOREIGN KEY (endpoint_id) REFERENCES endpoints(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_probe_endpoint_time ON probe_results(endpoint_id, checked_at);
+    CREATE INDEX IF NOT EXISTS idx_incidents_endpoint ON incidents(endpoint_id, started_at);
   `);
 }
 
@@ -153,17 +191,163 @@ export function deleteEndpoint(db: DatabaseSync, id: string): boolean {
   return Number(result.changes) > 0;
 }
 
-export function dashboard(db: DatabaseSync): EndpointSummary[] {
-  return listEndpoints(db).map((endpoint) => ({
-    ...endpoint,
-    status: endpoint.enabled ? 'unknown' : 'paused',
-    uptimePercent: null,
-    averageLatencyMs: null,
-    lastCheckedAt: null,
-    lastStatusCode: null,
-    lastErrorCategory: null,
-    openIncidentCount: 0,
+export function listDueEndpoints(db: DatabaseSync, nowIso: string): EndpointRecord[] {
+  const rows = db.prepare(
+    'SELECT * FROM endpoints WHERE enabled = 1 AND next_check_at <= ? ORDER BY next_check_at',
+  ).all(nowIso) as unknown as EndpointRow[];
+  return rows.map(mapEndpoint);
+}
+
+export function recordProbe(
+  db: DatabaseSync,
+  endpoint: EndpointRecord,
+  observation: ProbeObservation,
+  checkedAt = new Date(),
+): void {
+  const checkedIso = checkedAt.toISOString();
+  db.prepare(`
+    INSERT INTO probe_results (endpoint_id, checked_at, status_code, latency_ms, success, error_category)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    endpoint.id,
+    checkedIso,
+    observation.statusCode,
+    observation.latencyMs,
+    observation.success ? 1 : 0,
+    observation.errorCategory,
+  );
+
+  const openFailure = hasOpenIncident(db, endpoint.id, 'failure');
+  const openLatency = hasOpenIncident(db, endpoint.id, 'latency');
+  const decision = decideIncidents(
+    {
+      failure: openFailure,
+      latency: openLatency,
+      consecutiveFailures: endpoint.consecutiveFailures,
+    },
+    observation,
+    {
+      failureThreshold: endpoint.failureThreshold,
+      latencyThresholdMs: endpoint.latencyThresholdMs,
+    },
+  );
+
+  for (const kind of decision.open) {
+    db.prepare(
+      'INSERT INTO incidents (endpoint_id, kind, started_at, resolved_at, message) VALUES (?, ?, ?, NULL, ?)',
+    ).run(endpoint.id, kind, checkedIso, incidentMessage(kind, observation));
+  }
+  for (const kind of decision.resolve) {
+    db.prepare(
+      `UPDATE incidents SET resolved_at = ? WHERE endpoint_id = ? AND kind = ? AND resolved_at IS NULL`,
+    ).run(checkedIso, endpoint.id, kind);
+  }
+
+  const next = new Date(checkedAt.getTime() + endpoint.intervalMs).toISOString();
+  db.prepare('UPDATE endpoints SET consecutive_failures = ?, next_check_at = ?, updated_at = ? WHERE id = ?').run(
+    decision.consecutiveFailures,
+    next,
+    checkedIso,
+    endpoint.id,
+  );
+}
+
+export function listHistory(db: DatabaseSync, endpointId: string, sinceIso: string): ProbeResultRecord[] {
+  const rows = db.prepare(`
+    SELECT id, endpoint_id, checked_at, status_code, latency_ms, success, error_category
+    FROM probe_results
+    WHERE endpoint_id = ? AND checked_at >= ?
+    ORDER BY checked_at ASC
+    LIMIT 200
+  `).all(endpointId, sinceIso) as unknown as {
+    id: number;
+    endpoint_id: string;
+    checked_at: string;
+    status_code: number | null;
+    latency_ms: number;
+    success: number;
+    error_category: ErrorCategory | null;
+  }[];
+
+  return rows.map((row) => ({
+    id: row.id,
+    endpointId: row.endpoint_id,
+    checkedAt: row.checked_at,
+    statusCode: row.status_code,
+    latencyMs: row.latency_ms,
+    success: row.success === 1,
+    errorCategory: row.error_category,
   }));
+}
+
+export function listIncidents(db: DatabaseSync, endpointId?: string): IncidentRecord[] {
+  const sql = endpointId
+    ? `SELECT i.*, e.name AS endpoint_name FROM incidents i JOIN endpoints e ON e.id = i.endpoint_id WHERE i.endpoint_id = ? ORDER BY i.started_at DESC LIMIT 100`
+    : `SELECT i.*, e.name AS endpoint_name FROM incidents i JOIN endpoints e ON e.id = i.endpoint_id ORDER BY i.started_at DESC LIMIT 100`;
+  const rows = (endpointId ? db.prepare(sql).all(endpointId) : db.prepare(sql).all()) as unknown as IncidentRow[];
+  return rows.map(mapIncident);
+}
+
+export function dashboard(db: DatabaseSync, now = new Date()): EndpointSummary[] {
+  const since = new Date(now.getTime() - DAY_MS).toISOString();
+  return listEndpoints(db).map((endpoint) => {
+    const samples = listHistory(db, endpoint.id, since);
+    const latest = latestProbe(db, endpoint.id);
+    return {
+      ...endpoint,
+      status: endpoint.enabled ? (latest ? (latest.success ? 'up' : 'down') : 'unknown') : 'paused',
+      uptimePercent: uptimePercent(samples),
+      averageLatencyMs: averageLatency(samples),
+      lastCheckedAt: latest?.checkedAt ?? null,
+      lastStatusCode: latest?.statusCode ?? null,
+      lastErrorCategory: latest?.errorCategory ?? null,
+      openIncidentCount: countOpenIncidents(db, endpoint.id),
+    };
+  });
+}
+
+function latestProbe(db: DatabaseSync, endpointId: string): ProbeResultRecord | null {
+  const row = db.prepare(`
+    SELECT id, endpoint_id, checked_at, status_code, latency_ms, success, error_category
+    FROM probe_results
+    WHERE endpoint_id = ?
+    ORDER BY checked_at DESC
+    LIMIT 1
+  `).get(endpointId) as {
+    id: number;
+    endpoint_id: string;
+    checked_at: string;
+    status_code: number | null;
+    latency_ms: number;
+    success: number;
+    error_category: ErrorCategory | null;
+  } | undefined;
+  if (!row) {
+    return null;
+  }
+  return {
+    id: row.id,
+    endpointId: row.endpoint_id,
+    checkedAt: row.checked_at,
+    statusCode: row.status_code,
+    latencyMs: row.latency_ms,
+    success: row.success === 1,
+    errorCategory: row.error_category,
+  };
+}
+
+function countOpenIncidents(db: DatabaseSync, endpointId: string): number {
+  const row = db.prepare(
+    'SELECT COUNT(*) AS count FROM incidents WHERE endpoint_id = ? AND resolved_at IS NULL',
+  ).get(endpointId) as { count: number };
+  return Number(row.count);
+}
+
+function hasOpenIncident(db: DatabaseSync, endpointId: string, kind: IncidentKind): boolean {
+  const row = db.prepare(
+    'SELECT id FROM incidents WHERE endpoint_id = ? AND kind = ? AND resolved_at IS NULL LIMIT 1',
+  ).get(endpointId, kind) as { id: number } | undefined;
+  return row !== undefined;
 }
 
 function mapEndpoint(row: EndpointRow): EndpointRecord {
@@ -182,5 +366,27 @@ function mapEndpoint(row: EndpointRow): EndpointRecord {
     nextCheckAt: row.next_check_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+interface IncidentRow {
+  id: number;
+  endpoint_id: string;
+  endpoint_name: string;
+  kind: IncidentKind;
+  started_at: string;
+  resolved_at: string | null;
+  message: string;
+}
+
+function mapIncident(row: IncidentRow): IncidentRecord {
+  return {
+    id: row.id,
+    endpointId: row.endpoint_id,
+    endpointName: row.endpoint_name,
+    kind: row.kind,
+    startedAt: row.started_at,
+    resolvedAt: row.resolved_at,
+    message: row.message,
   };
 }
