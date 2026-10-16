@@ -5,7 +5,11 @@ export const routes: Routes = [
     path: '',
     loadComponent: () => import('./layout/shell').then((module) => module.Shell),
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'endpoints' },
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard-page').then((module) => module.DashboardPage),
+      },
       {
         path: 'endpoints',
         loadComponent: () =>
