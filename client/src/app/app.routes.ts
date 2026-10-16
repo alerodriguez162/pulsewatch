@@ -25,6 +25,16 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/endpoints/endpoint-form-page').then((module) => module.EndpointFormPage),
       },
+      {
+        path: 'monitoring/:id',
+        loadComponent: () =>
+          import('./features/monitoring/monitoring-page').then((module) => module.MonitoringPage),
+      },
+      {
+        path: 'analytics',
+        loadComponent: () =>
+          import('./features/analytics/analytics-page').then((module) => module.AnalyticsPage),
+      },
     ],
   },
 ];
