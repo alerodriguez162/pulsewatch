@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { switchMap, timer } from 'rxjs';
 
 import { MonitoringStore } from '../core/monitoring-store';
 import { ThemeService } from '../core/theme.service';
@@ -20,7 +21,11 @@ import { ThemeService } from '../core/theme.service';
         <a routerLink="/alerts" routerLinkActive="active">Alerts</a>
         <a routerLink="/settings" routerLinkActive="active">Settings</a>
       </nav>
-      <button type="button" [attr.aria-pressed]="theme.mode() === 'dark'" (click)="theme.toggle()">
+      <button
+        type="button"
+        [attr.aria-pressed]="theme.mode() === 'dark'"
+        (click)="theme.toggle()"
+      >
         {{ theme.mode() === 'dark' ? 'Light mode' : 'Dark mode' }}
       </button>
     </header>
@@ -34,6 +39,11 @@ export class Shell {
   private readonly store = inject(MonitoringStore);
 
   constructor() {
-    this.store.refresh().pipe(takeUntilDestroyed()).subscribe();
+    timer(0, 5000)
+      .pipe(
+        switchMap(() => this.store.refresh()),
+        takeUntilDestroyed(),
+      )
+      .subscribe();
   }
 }

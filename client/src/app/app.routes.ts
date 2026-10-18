@@ -35,6 +35,10 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/analytics/analytics-page').then((module) => module.AnalyticsPage),
       },
+      {
+        path: 'alerts',
+        loadComponent: () => import('./features/alerts/alerts-page').then((module) => module.AlertsPage),
+      },
     ],
   },
 ];
