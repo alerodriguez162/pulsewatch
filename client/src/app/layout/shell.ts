@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { switchMap, timer } from 'rxjs';
 
 import { MonitoringStore } from '../core/monitoring-store';
+import { PollIntervalService } from '../core/poll-interval.service';
 import { ThemeService } from '../core/theme.service';
 
 @Component({
@@ -21,6 +22,7 @@ import { ThemeService } from '../core/theme.service';
         <a routerLink="/alerts" routerLinkActive="active">Alerts</a>
         <a routerLink="/settings" routerLinkActive="active">Settings</a>
       </nav>
+      <button type="button" data-testid="refresh-monitoring" (click)="refresh()">Refresh</button>
       <button
         type="button"
         [attr.aria-pressed]="theme.mode() === 'dark'"
@@ -37,13 +39,18 @@ import { ThemeService } from '../core/theme.service';
 export class Shell {
   readonly theme = inject(ThemeService);
   private readonly store = inject(MonitoringStore);
+  private readonly poll = inject(PollIntervalService);
 
   constructor() {
-    timer(0, 5000)
+    toObservable(this.poll.intervalMs)
       .pipe(
-        switchMap(() => this.store.refresh()),
+        switchMap((intervalMs) => timer(0, intervalMs).pipe(switchMap(() => this.store.refresh()))),
         takeUntilDestroyed(),
       )
       .subscribe();
+  }
+
+  refresh(): void {
+    this.store.refresh().subscribe();
   }
 }
