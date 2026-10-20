@@ -1,0 +1,16 @@
+{
+  "id": "ep-up",
+  "name": "Example",
+  "url": "https://example.com",
+  "method": "GET",
+  "timeoutMs": 5000,
+  "intervalMs": 60000,
+  "expectedStatus": null,
+  "latencyThresholdMs": 800,
+  "failureThreshold": 2,
+  "enabled": true,
+  "consecutiveFailures": 0,
+  "nextCheckAt": "2026-10-21T18:00:00.000Z",
+  "createdAt": "2026-10-21T12:00:00.000Z",
+  "updatedAt": "2026-10-21T12:00:00.000Z"
+}

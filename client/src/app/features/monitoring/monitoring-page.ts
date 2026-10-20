@@ -18,7 +18,7 @@ import { StatusBadge } from '../../shared/status-badge';
   imports: [RouterLink, MatButton, MetricChart, ErrorState, LoadingState, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="page">
+    <section class="page" data-testid="monitoring">
       @if (loading()) {
         <app-loading-state message="Loading history" />
       } @else if (error(); as message) {
@@ -45,7 +45,7 @@ import { StatusBadge } from '../../shared/status-badge';
             <p>{{ formatLatency(summary()?.averageLatencyMs ?? null) }}</p>
           </article>
         </div>
-        <button matButton="filled" type="button" [disabled]="checking() || !current.enabled" (click)="check()">
+        <button matButton="filled" type="button" data-testid="check-now" [disabled]="checking() || !current.enabled" (click)="check()">
           {{ checking() ? 'Checking' : 'Check now' }}
         </button>
         @if (history().length === 0) {

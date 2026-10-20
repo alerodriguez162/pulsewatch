@@ -9,7 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../shared/state-panels'
   imports: [MetricChart, EmptyState, ErrorState, LoadingState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="page">
+    <section class="page" data-testid="analytics">
       <header class="page-header">
         <div>
           <h1>Analytics</h1>

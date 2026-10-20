@@ -1,0 +1,11 @@
+[
+  {
+    "id": 2,
+    "endpointId": "ep-up",
+    "endpointName": "Example",
+    "kind": "latency",
+    "startedAt": "2026-10-20T17:00:00.000Z",
+    "resolvedAt": "2026-10-20T18:00:00.000Z",
+    "message": "Latency recovered."
+  }
+]

@@ -18,17 +18,17 @@ import { StatusBadge } from './status-badge';
         <thead>
           <tr>
             <th [attr.aria-sort]="ariaSort('name')">
-              <button type="button" (click)="store.toggleSort('name')">Name</button>
+              <button type="button" data-testid="sort-name" (click)="store.toggleSort('name')">Name</button>
             </th>
             <th>URL</th>
             <th [attr.aria-sort]="ariaSort('status')">
-              <button type="button" (click)="store.toggleSort('status')">Status</button>
+              <button type="button" data-testid="sort-status" (click)="store.toggleSort('status')">Status</button>
             </th>
             <th [attr.aria-sort]="ariaSort('uptime')">
-              <button type="button" (click)="store.toggleSort('uptime')">Uptime 24h</button>
+              <button type="button" data-testid="sort-uptime" (click)="store.toggleSort('uptime')">Uptime 24h</button>
             </th>
             <th [attr.aria-sort]="ariaSort('latency')">
-              <button type="button" (click)="store.toggleSort('latency')">Avg latency</button>
+              <button type="button" data-testid="sort-latency" (click)="store.toggleSort('latency')">Avg latency</button>
             </th>
             <th>Last check</th>
             @if (manage()) {
@@ -51,10 +51,14 @@ import { StatusBadge } from './status-badge';
                 <td class="actions">
                   <a [routerLink]="['/endpoints', endpoint.id]">Edit</a>
                   @if (pendingDelete() === endpoint.id) {
-                    <button type="button" (click)="confirmDelete.emit(endpoint)">Confirm delete</button>
-                    <button type="button" (click)="cancelDelete.emit()">Cancel</button>
+                    <button type="button" data-testid="confirm-delete" (click)="confirmDelete.emit(endpoint)">
+                      Confirm delete
+                    </button>
+                    <button type="button" data-testid="cancel-delete" (click)="cancelDelete.emit()">Cancel</button>
                   } @else {
-                    <button type="button" (click)="requestDelete.emit(endpoint.id)">Delete</button>
+                    <button type="button" data-testid="delete-endpoint" (click)="requestDelete.emit(endpoint.id)">
+                      Delete
+                    </button>
                   }
                 </td>
               }

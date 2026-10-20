@@ -1,0 +1,71 @@
+{
+  "generatedAt": "2026-10-21T18:00:00.000Z",
+  "recentIncidents": [
+    {
+      "id": 1,
+      "endpointId": "ep-down",
+      "endpointName": "Billing",
+      "kind": "failure",
+      "startedAt": "2026-10-21T17:00:00.000Z",
+      "resolvedAt": null,
+      "message": "HTTP 503 did not meet the expected status."
+    },
+    {
+      "id": 2,
+      "endpointId": "ep-up",
+      "endpointName": "Example",
+      "kind": "latency",
+      "startedAt": "2026-10-20T17:00:00.000Z",
+      "resolvedAt": "2026-10-20T18:00:00.000Z",
+      "message": "Latency recovered."
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "ep-up",
+      "name": "Example",
+      "url": "https://example.com",
+      "method": "GET",
+      "timeoutMs": 5000,
+      "intervalMs": 60000,
+      "expectedStatus": null,
+      "latencyThresholdMs": 800,
+      "failureThreshold": 2,
+      "enabled": true,
+      "consecutiveFailures": 0,
+      "nextCheckAt": "2026-10-21T18:00:00.000Z",
+      "createdAt": "2026-10-21T12:00:00.000Z",
+      "updatedAt": "2026-10-21T12:00:00.000Z",
+      "status": "up",
+      "uptimePercent": 99.5,
+      "averageLatencyMs": 120,
+      "lastCheckedAt": "2026-10-21T18:00:00.000Z",
+      "lastStatusCode": 200,
+      "lastErrorCategory": null,
+      "openIncidentCount": 0
+    },
+    {
+      "id": "ep-down",
+      "name": "Billing",
+      "url": "https://billing.example.com",
+      "method": "GET",
+      "timeoutMs": 5000,
+      "intervalMs": 60000,
+      "expectedStatus": null,
+      "latencyThresholdMs": 800,
+      "failureThreshold": 2,
+      "enabled": true,
+      "consecutiveFailures": 2,
+      "nextCheckAt": "2026-10-21T18:00:00.000Z",
+      "createdAt": "2026-10-21T12:00:00.000Z",
+      "updatedAt": "2026-10-21T12:00:00.000Z",
+      "status": "down",
+      "uptimePercent": 40,
+      "averageLatencyMs": 900,
+      "lastCheckedAt": "2026-10-21T18:00:00.000Z",
+      "lastStatusCode": 503,
+      "lastErrorCategory": "http",
+      "openIncidentCount": 1
+    }
+  ]
+}

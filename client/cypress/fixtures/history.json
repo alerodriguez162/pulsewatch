@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "endpointId": "ep-up",
+    "checkedAt": "2026-10-21T18:00:00.000Z",
+    "statusCode": 200,
+    "latencyMs": 120,
+    "success": true,
+    "errorCategory": null
+  }
+]

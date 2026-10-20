@@ -12,7 +12,7 @@ const labels: Record<EndpointStatus, string> = {
 @Component({
   selector: 'app-status-badge',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span [class]="'status status-' + status()">{{ label() }}</span>`,
+  template: `<span data-testid="status-badge" [class]="'status status-' + status()">{{ label() }}</span>`,
 })
 export class StatusBadge {
   readonly status = input.required<EndpointStatus>();
