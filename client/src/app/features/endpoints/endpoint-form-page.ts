@@ -49,7 +49,7 @@ import { LoadingState } from '../../shared/state-panels';
         <form class="form" data-testid="endpoint-form" [formGroup]="form" (ngSubmit)="save()">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Name</mat-label>
-            <input matInput formControlName="name" required />
+            <input matInput formControlName="name" required data-testid="endpoint-name" />
             @if (form.controls['name']?.touched && form.controls['name']?.hasError('required')) {
               <mat-error>Name is required.</mat-error>
             }
